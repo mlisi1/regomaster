@@ -21,6 +21,8 @@ class PlotterControl(Node):
 
         super().__init__("PlotterControl")
 
+        rclpy.get_default_context().on_shutdown(self.close_serial)
+
         self.declare_parameter("device", "/dev/ttyUSB0")
         self.declare_parameter("baud_rate", 115200)
 
@@ -44,15 +46,54 @@ class PlotterControl(Node):
         self.send_gcode("$Y")
         self.send_gcode("G21")
         self.send_gcode("G90")
+        self.send_gcode("$I")
+        self.send_gcode("$21=1")
+        self.send_gcode("$5=1")
 
         self.get_logger().info("Plotter initialized")
 
         self.point_sub = self.create_subscription(PointStamped, "position", self.position_callback, 10)
-        self.status_timer = self.create_timer(0.1, self.status_callback)
+        self.status_timer = self.create_timer(0.5, self.status_callback)
         self.z_publisher = self.create_publisher(Float32, "z_position", 10)
 
         self.actual_position = PointStamped()
         self.z_position = Float32()
+
+        self.homing_procedure()
+
+
+    def homing_procedure(self):
+        
+        self.send_gcode("$22=1")
+        self.send_gcode("$X")  
+        time.sleep(0.1)  
+
+        self.send_gcode("$H")
+        # self.wait_until_ok() 
+
+        self.get_logger().info("Homing completed")
+
+
+    def wait_until_alarm(self):
+        while True:       
+            if self.ser.in_waiting > 0:
+                response = self.read_response()
+                self.get_logger().debug(f"Received message: {response}")
+                if "ALARM" in response:
+                    self.get_logger().info("Endstop reached!")
+                    break  
+            time.sleep(0.1) 
+
+    def wait_until_ok(self):
+        while True:       
+            if self.ser.in_waiting > 0:
+                response = self.read_response()
+                self.get_logger().debug(f"Received message: {response}")
+                if "ok" in response:
+                    break  
+            time.sleep(0.1) 
+
+
 
 
             
@@ -64,6 +105,8 @@ class PlotterControl(Node):
                 self.get_logger().info(f"Attempt {attempt+1}/5 to connect on {dev}...")
                 ser = serial.Serial(dev, baud_rate, timeout=2)
                 time.sleep(2)  # wait for controller reset
+                ser.reset_input_buffer()
+                ser.reset_output_buffer()
 
                 if ser.is_open:
                     self.get_logger().info("Connected to plotter")
@@ -97,11 +140,13 @@ class PlotterControl(Node):
 
         self.get_logger().debug(f"Sending command {code}")
         self.ser.write((code + '\n').encode())
+        self.ser.flush()
         response = self.read_response()
         self.get_logger().debug(f"Response: {response}")
         return self.check_response(response)
     
     def check_response(self, response):
+        self.get_logger().info(f'{response}')
         if response.startswith('error:'):
             error_code = int(response.split(':')[1])            
             self.get_logger().warn(f"Error {error_code}: {error_messages.get(error_code, 'Unknown error')}")
@@ -121,6 +166,7 @@ class PlotterControl(Node):
     def get_position(self):
         self.ser.write("?".encode())
         response = self.read_response()
+        self.get_logger().info(f"{response}")
         match = re.search(r"MPos:([-+]?\d*\.?\d+),([-+]?\d*\.?\d+),([-+]?\d*\.?\d+)", response)
         if match:
             state, x, y= match.groups()
@@ -168,6 +214,17 @@ class PlotterControl(Node):
         state = self.get_position()
 
         self.get_logger().info(f"{state}")
+
+
+    def close_serial(self):
+
+        if self.ser:
+            self.ser.close()
+            self.get_logger().info("Closing serial communication")
+
+    def __del__(self):
+        self.close_serial()
+
         
 
 
@@ -181,8 +238,13 @@ def main(args = None):
 
     node = PlotterControl()
 
-    rclpy.spin(node)
-
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.close_serial()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 
