@@ -1,0 +1,17 @@
+PlantDetector:
+  ros__parameters:
+
+    aruco0_position:  [0.0, 0.0]
+    aruco1_position:  [0.0, 955.0]
+    aruco2_position:  [981.0, 955.0]
+    aruco3_position:  [981.0, 0.0]
+
+    param1:           140
+    param2:           30
+    minDist:          90
+    min_radius:       20
+    max_radius:       50
+
+    buffer_length:    10
+
+    detections_save_path: "~/.regolife"
