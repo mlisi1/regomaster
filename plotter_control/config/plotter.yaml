@@ -1,0 +1,6 @@
+CheckPlants:
+  ros__parameters:
+    x_offset: 0
+    y_offset: 0
+
+    json_path: '~/.regolife'

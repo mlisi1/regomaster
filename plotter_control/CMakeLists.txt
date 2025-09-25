@@ -17,6 +17,7 @@ ament_python_install_package(scripts)
 
 install(
   PROGRAMS  scripts/plotter_control.py
+            scripts/check_plants.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

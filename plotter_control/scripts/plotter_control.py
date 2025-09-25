@@ -28,7 +28,7 @@ class PlotterControl(Node):
 
         self.declare_parameter("x_lim", 0)
         self.declare_parameter("y_lim", 0)
-        self.declare_parameter("speed", 1000)
+        self.declare_parameter("speed", 2000)
 
         self.x_lim = self.get_parameter("x_lim").get_parameter_value().integer_value
         self.y_lim = self.get_parameter("y_lim").get_parameter_value().integer_value
@@ -49,6 +49,8 @@ class PlotterControl(Node):
         self.send_gcode("$I")
         self.send_gcode("$21=1")
         self.send_gcode("$5=1")
+        self.send_gcode("$Y/MaxTravel=970")
+        self.send_gcode("$I")
 
         self.get_logger().info("Plotter initialized")
 
@@ -65,11 +67,11 @@ class PlotterControl(Node):
     def homing_procedure(self):
         
         self.send_gcode("$22=1")
-        self.send_gcode("$X")  
-        time.sleep(0.1)  
-
-        self.send_gcode("$H")
-        # self.wait_until_ok() 
+        self.send_gcode("$Y") 
+        self.send_gcode("$X") 
+        time.sleep(1.0)  
+        
+        self.send_gcode("$H") 
 
         self.get_logger().info("Homing completed")
 
@@ -166,7 +168,7 @@ class PlotterControl(Node):
     def get_position(self):
         self.ser.write("?".encode())
         response = self.read_response()
-        self.get_logger().info(f"{response}")
+        # self.get_logger().info(f"{response}")
         match = re.search(r"MPos:([-+]?\d*\.?\d+),([-+]?\d*\.?\d+),([-+]?\d*\.?\d+)", response)
         if match:
             state, x, y= match.groups()
@@ -213,7 +215,7 @@ class PlotterControl(Node):
 
         state = self.get_position()
 
-        self.get_logger().info(f"{state}")
+        # self.get_logger().info(f"{state}")
 
 
     def close_serial(self):

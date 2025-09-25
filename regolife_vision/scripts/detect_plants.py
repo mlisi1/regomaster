@@ -250,9 +250,7 @@ class PlantDetector(Node):
         return averaged
     
 
-    def save_to_json(self, detections):
-
-        
+    def save_to_json(self, detections):        
         
         detections = {
             "plants": [
