@@ -1,0 +1,5 @@
+RS485Scanner:
+  ros__parameters:
+    device: "/dev/ttyAMA0"
+    baud_rate: 9600
+    interval: 3600.0
